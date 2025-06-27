@@ -84,8 +84,8 @@ export default function Home() {
   };
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">Wateval Pipeline</h1>
+    <div className="p-6 mt-22">
+      
       <PipelineForm onSubmit={handleSubmit} />
       {error && <p className="text-red-600 mt-4">{error}</p>}
       {isRunning && <p className="mt-4">Simulation running...</p>}
