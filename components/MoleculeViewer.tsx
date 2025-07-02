@@ -16,8 +16,8 @@ interface MoleculeViewerProps {
 
 export default function MoleculeViewer({
   files,
-  height = '500px',
-  width = '800px',
+  height = '430px',
+  width = '550px',
 }: MoleculeViewerProps) {
   const viewerRef = useRef<HTMLDivElement>(null);
   const viewerInstance = useRef<any>(null);
@@ -114,11 +114,15 @@ export default function MoleculeViewer({
           {error}
         </div>
       ) : (
-        <div
+        <>
+        <h1>PDB Visualization</h1>
+          <div
           ref={viewerRef}
           style={{ width, height, position: 'relative' }}
           className="border border-gray-200 rounded-md shadow-sm"
         />
+        </>
+
       )}
     </div>
   );

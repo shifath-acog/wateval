@@ -59,6 +59,7 @@ export default function SummaryTable({ summaryUrl }: SummaryTableProps) {
 
   return (
     <div className="mt-4 overflow-x-auto">
+      <h1>Summary Table</h1>
       <table className="min-w-full bg-white border border-gray-300">
         <thead>
           <tr className="bg-gray-100">

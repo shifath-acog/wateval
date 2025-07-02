@@ -44,7 +44,7 @@ export async function GET(req: Request) {
   // Otherwise, list available files for the task
   try {
     // *** CHANGE THIS LINE ***
-    const dataDir = '/app/results'; // Changed from '/app/data' to '/app/results'
+    const dataDir = '/app/results'; 
     const pdbFile = `${taskId}_md_energy_min.pdb`;
     const summaryFile = `${taskId}_wat_FE_summary.dat`;
     const pdbPath = path.join(dataDir, pdbFile);

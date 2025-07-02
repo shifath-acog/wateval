@@ -72,9 +72,11 @@ const formSchema = z.object({
 
 interface PipelineFormProps {
   onSubmit: (formData: FormData) => void;
+   isRunning: boolean;
+
 }
 
-export default function PipelineForm({ onSubmit }: PipelineFormProps) {
+export default function PipelineForm({ onSubmit , isRunning }: PipelineFormProps) {
   const methods = useForm({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -392,14 +394,14 @@ export default function PipelineForm({ onSubmit }: PipelineFormProps) {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <Label>Protein Chain ID *</Label>
-                        <Input {...register('prot_chain_id')} className="mt-1" />
+                        <Input {...register('prot_chain_id')} className="mt-1" placeholder='A' />
                         {errors.prot_chain_id && (
                           <p className="text-red-600 text-sm mt-1">{errors.prot_chain_id.message}</p>
                         )}
                       </div>
                       <div>
                         <Label>Ligand Chain ID *</Label>
-                        <Input {...register('lig_chain_id')} className="mt-1" />
+                        <Input {...register('lig_chain_id')} className="mt-1"  placeholder='A'/>
                         {errors.lig_chain_id && (
                           <p className="text-red-600 text-sm mt-1">{errors.lig_chain_id.message}</p>
                         )}
@@ -410,6 +412,7 @@ export default function PipelineForm({ onSubmit }: PipelineFormProps) {
                           type="number"
                           {...register('lig_resid', { valueAsNumber: true })}
                           className="mt-1"
+                          placeholder="301"
                         />
                         {errors.lig_resid && (
                           <p className="text-red-600 text-sm mt-1">{errors.lig_resid.message}</p>
@@ -417,21 +420,21 @@ export default function PipelineForm({ onSubmit }: PipelineFormProps) {
                       </div>
                       <div>
                         <Label>Ligand Residue Name *</Label>
-                        <Input {...register('lig_resname')} className="mt-1" />
+                        <Input {...register('lig_resname')} className="mt-1" placeholder='IMA' />
                         {errors.lig_resname && (
                           <p className="text-red-600 text-sm mt-1">{errors.lig_resname.message}</p>
                         )}
                       </div>
                       <div>
                         <Label>Water Chain ID *</Label>
-                        <Input {...register('wat_chain_id')} className="mt-1" />
+                        <Input {...register('wat_chain_id')} className="mt-1" placeholder='A' />
                         {errors.wat_chain_id && (
                           <p className="text-red-600 text-sm mt-1">{errors.wat_chain_id.message}</p>
                         )}
                       </div>
                       <div>
                         <Label>Water Residue Name *</Label>
-                        <Input {...register('wat_resname')} className="mt-1" />
+                        <Input {...register('wat_resname')} className="mt-1" placeholder='HOH' />
                         {errors.wat_resname && (
                           <p className="text-red-600 text-sm mt-1">{errors.wat_resname.message}</p>
                         )}
@@ -867,36 +870,7 @@ export default function PipelineForm({ onSubmit }: PipelineFormProps) {
                         )}
                       </div>
                     </div>
-                    <div className="mt-6 p-4 bg-muted/50 rounded-lg">
-                      <h4 className="font-medium mb-2">Simulation Summary</h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
-                        <div>
-                          <span className="text-muted-foreground">PDB Source:</span>{' '}
-                          {pdbSource === 'id' ? getValues('pdb_id') : pdbFile?.name || 'No file selected'}
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground">Protein FF:</span> {getValues('prot_force_field')}
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground">Ligand FF:</span> {getValues('lig_force_field')}
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground">Water Model:</span> {getValues('wat_model')}
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground">Solvation:</span> {getValues('solvate') ? 'Yes' : 'No'}
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground">Temperature:</span> {getValues('temperature')} K
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground">Production Steps:</span> {getValues('prod_steps').toLocaleString()}
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground">Output Location:</span> {getValues('output_folder')}/{getValues('output_prefix')}*
-                        </div>
-                      </div>
-                    </div>
+
                   </CardContent>
                 </Card>
               </TabsContent>
@@ -924,16 +898,16 @@ export default function PipelineForm({ onSubmit }: PipelineFormProps) {
                 <Button
                   type="button"
                   onClick={handleSubmit(onSubmitHandler)}
-                  disabled={isSubmitting}
+                  disabled={isRunning}
                   className="gap-1 bg-green-600 hover:bg-green-700"
                 >
-                  {isSubmitting ? (
+                  {isRunning ? (
                     <>
                       <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                       </svg>
-                      Submitting...
+                      Running...
                     </>
                   ) : (
                     <>

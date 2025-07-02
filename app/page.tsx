@@ -1,99 +1,119 @@
 'use client';
 
-import { useState, useEffect, FormEvent } from 'react';
+import { useState, useEffect } from 'react';
 import PipelineForm from '../components/PipelineForm';
-import MoleculeViewer from '../components/MoleculeViewer'; 
-import SummaryTable from '../components/SummaryTable'; // Adjust import path as needed
+import MoleculeViewer from '../components/MoleculeViewer';
+import SummaryTable from '../components/SummaryTable';
 
 export default function Home() {
-  const [outputFiles, setOutputFiles] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isRunning, setIsRunning] = useState(false);
-  const [progressHistory, setProgressHistory] = useState<string[]>([]);
-  const [currentStatus, setCurrentStatus] = useState<string | null>(null);
-  const [taskId, setTaskId] = useState<string | null>(null);
   const [pdbUrl, setPdbUrl] = useState<string | null>(null);
   const [summaryUrl, setSummaryUrl] = useState<string | null>(null);
 
+  // On initial load, try to get a pending taskId from localStorage
+  const [taskId, setTaskId] = useState<string | null>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('pipelineTaskId');
+    }
+    return null;
+  });
+
+  // This useEffect hook is the core of the polling logic
+  useEffect(() => {
+    if (!taskId) return; // Don't do anything if there's no task
+
+    let isMounted = true; // Prevent state updates on unmounted component
+
+    const checkStatus = async () => {
+      try {
+        const response = await fetch(`/api/pipeline-status?taskId=${taskId}`);
+        if (!isMounted) return; // Exit if component unmounted while fetching
+
+        if (!response.ok) {
+          console.error("Status check failed, will retry.");
+          return;
+        }
+
+        const data = await response.json();
+
+        if (data.status === 'completed') {
+          setPdbUrl(data.pdb_url);
+          setSummaryUrl(data.summary_url);
+          setIsRunning(false);
+          localStorage.removeItem('pipelineTaskId'); // Clean up
+        } else if (data.status === 'failed') {
+          setError(data.error || 'The pipeline process failed.');
+          setIsRunning(false);
+          localStorage.removeItem('pipelineTaskId');
+        } else {
+          setIsRunning(true);
+        }
+      } catch (err) {
+        console.error("Error during polling:", err);
+      }
+    };
+
+    checkStatus();
+
+    const intervalId = setInterval(() => {
+      if (document.hidden) return;
+      checkStatus();
+    }, 10000);
+
+    if (!isRunning) {
+      clearInterval(intervalId);
+    }
+
+    return () => {
+      isMounted = false;
+      clearInterval(intervalId);
+    };
+  }, [taskId, isRunning]);
+
   const handleSubmit = async (formData: FormData) => {
-    setOutputFiles([]);
     setError(null);
-    setProgressHistory([]);
-    setCurrentStatus(null);
     setTaskId(null);
     setPdbUrl(null);
     setSummaryUrl(null);
     setIsRunning(true);
 
     try {
-      const response = await fetch('/api/run-pipeline', {
+      const response = await fetch('/api/start-pipeline', {
         method: 'POST',
         body: formData,
       });
 
+      const data = await response.json();
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.statusText}`);
+        throw new Error(data.error || 'Failed to start pipeline');
       }
 
-      const reader = response.body?.getReader();
-      if (!reader) throw new Error('No response body');
+      localStorage.setItem('pipelineTaskId', data.taskId);
+      setTaskId(data.taskId);
 
-      const decoder = new TextDecoder();
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        const text = decoder.decode(value);
-        const events = text.trim().split('\n\n').filter(event => event);
-        for (const event of events) {
-          if (event.startsWith('event: end')) {
-            console.log('Pipeline stream ended');
-            setIsRunning(false);
-            if (!error && taskId && currentStatus === 'completed') {
-              setProgressHistory((prev) => [...prev, 'Pipeline completed successfully']);
-            }
-            break;
-          } else if (event.startsWith('data: ')) {
-            const data = JSON.parse(event.replace('data: ', ''));
-            if (data.error) {
-              setError(data.error);
-              setProgressHistory((prev) => [...prev, `Error: ${data.error}`]);
-              setIsRunning(false);
-            } else if (data.status) {
-              if (!currentStatus || data.status !== currentStatus) {
-                const statusMessage = data.status === 'running' ? 'Simulation running' : `Status: ${data.status}`;
-                setProgressHistory((prev) => [...prev, statusMessage]);
-                setCurrentStatus(data.status);
-              }
-              setTaskId(data.taskId);
-              if (data.status === 'completed' && data.pdb_url) {
-                setPdbUrl(data.pdb_url);
-                setSummaryUrl(data.summary_url); // Set summary URL when available
-                setIsRunning(false);
-              } else if (data.status === 'failed') {
-                setError(data.error || 'Pipeline failed');
-                setIsRunning(false);
-              }
-            }
-          }
-        }
-      }
     } catch (err) {
-      setError(`Pipeline error: ${err instanceof Error ? err.message : String(err)}`);
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      setError(errorMessage);
       setIsRunning(false);
     }
   };
 
   return (
     <div className="p-6 mt-22">
-      
-      <PipelineForm onSubmit={handleSubmit} />
+      {/* Change is here: Pass isRunning to PipelineForm and always render it */}
+      <PipelineForm onSubmit={handleSubmit} isRunning={isRunning} />
+
       {error && <p className="text-red-600 mt-4">{error}</p>}
-      {isRunning && <p className="mt-4">Simulation running...</p>}
-      {!isRunning && taskId && pdbUrl && (
+      {isRunning && <p className="mt-4 text-blue-600">🔄 Simulation running... You can safely close this page and return later.</p>}
+
+      {/* Show results once they are available */}
+      {!isRunning && pdbUrl && (
         <>
-          <h2 className="text-xl font-semibold mt-6">PDB Visualization</h2>
+          <h2 className="text-xl font-semibold mt-6">✅ Results</h2>
+          {/* <h1> PDB Visualization </h1> */}
           <MoleculeViewer files={[pdbUrl]} height="500px" width="800px" />
-          <h2 className="text-xl font-semibold mt-6">Water Free Energy Summary</h2>
+          {/* <h1> Summary Table </h1> */}
           <SummaryTable summaryUrl={summaryUrl} />
         </>
       )}
