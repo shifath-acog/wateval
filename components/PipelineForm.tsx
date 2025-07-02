@@ -65,10 +65,23 @@ const formSchema = z.object({
 }).refine((data) => data.pdb_id || data.pdb_file !== undefined, {
   message: 'Either PDB ID or PDB File is required',
   path: ['pdb_id'],
-}).refine((data) => (data.wat_sites && !data.wat_sel_dist) || (!data.wat_sites && data.wat_sel_dist), {
-  message: 'Please provide only one of Water Sites or Water Selection Distance',
-  path: ['wat_sites'],
-});
+}).refine(
+  (data) =>
+    (!!data.wat_sites && !data.wat_sel_dist) ||
+    (!data.wat_sites && !!data.wat_sel_dist),
+  {
+    message: 'Either Water Sites or Water Selection Distance is required (not both).',
+    path: ['wat_sites'],
+  }
+).refine(
+  (data) =>
+    (!!data.wat_sites && data.wat_sites.trim().length > 0) ||
+    (!!data.wat_sel_dist && !isNaN(data.wat_sel_dist)),
+  {
+    message: 'Please provide a value for the selected water selection method.',
+    path: ['wat_sites'],
+  }
+);
 
 interface PipelineFormProps {
   onSubmit: (formData: FormData) => void;
@@ -81,12 +94,12 @@ export default function PipelineForm({ onSubmit , isRunning }: PipelineFormProps
     resolver: zodResolver(formSchema),
     defaultValues: {
       pdb_id: '1LPG',
-      prot_chain_id: 'A',
-      lig_chain_id: 'A',
-      lig_resid: 301,
-      lig_resname: 'IMA',
-      wat_chain_id: 'A',
-      wat_resname: 'HOH',
+      // prot_chain_id: 'A',
+      // lig_chain_id: 'A',
+      // lig_resid: 301,
+      // lig_resname: 'IMA',
+      // wat_chain_id: 'A',
+      // wat_resname: 'HOH',
       prot_force_field: 'amber/ff14SB.xml',
       lig_force_field: 'openff-2.2.0',
       lig_partial_charges: 'am1bcc',
@@ -103,12 +116,12 @@ export default function PipelineForm({ onSubmit , isRunning }: PipelineFormProps
       pressure: 1.0,
       temperature: 300,
       dump_interval: 1000,
-      equil_steps: 25000,
-      prod_steps: 25000,
+      equil_steps: 500000,
+      prod_steps: 2000000,
       grid_box_padding: 1.0,
       wat_num_dens: 0.0329,
-      wat_sites: 'B473',
-      output_folder: '1mwe_wat_thermo',
+      // wat_sites: 'B473',
+      // output_folder: '1mwe_wat_thermo',
       output_prefix: 'md',
     },
   });
@@ -133,23 +146,23 @@ export default function PipelineForm({ onSubmit , isRunning }: PipelineFormProps
   const pdbIdValue = watch('pdb_id');
 
   // Dynamic defaults for 1LPG
-  React.useEffect(() => {
-    if (pdbIdValue === '1LPG') {
-      setValue('lig_resname', 'IMA', { shouldValidate: true });
-      setValue('lig_resid', 301, { shouldValidate: true });
-      setValue('wat_sites', 'B473', { shouldValidate: true });
-      setValue('prot_chain_id', 'B', { shouldValidate: true });
-      setValue('lig_chain_id', 'B', { shouldValidate: true });
-      setValue('wat_chain_id', 'B', { shouldValidate: true });
-    } else {
-      setValue('lig_resname', 'SIA', { shouldValidate: true });
-      setValue('lig_resid', 1, { shouldValidate: true });
-      setValue('wat_sites', 'A1326,A1327', { shouldValidate: true });
-      setValue('prot_chain_id', 'A', { shouldValidate: true });
-      setValue('lig_chain_id', 'A', { shouldValidate: true });
-      setValue('wat_chain_id', 'A', { shouldValidate: true });
-    }
-  }, [pdbIdValue, setValue]);
+  // React.useEffect(() => {
+  //   if (pdbIdValue === '1LPG') {
+  //     setValue('lig_resname', 'IMA', { shouldValidate: true });
+  //     setValue('lig_resid', 301, { shouldValidate: true });
+  //     setValue('wat_sites', 'B473', { shouldValidate: true });
+  //     setValue('prot_chain_id', 'B', { shouldValidate: true });
+  //     setValue('lig_chain_id', 'B', { shouldValidate: true });
+  //     setValue('wat_chain_id', 'B', { shouldValidate: true });
+  //   } else {
+  //     setValue('lig_resname', 'SIA', { shouldValidate: true });
+  //     setValue('lig_resid', 1, { shouldValidate: true });
+  //     setValue('wat_sites', 'A1326,A1327', { shouldValidate: true });
+  //     setValue('prot_chain_id', 'A', { shouldValidate: true });
+  //     setValue('lig_chain_id', 'A', { shouldValidate: true });
+  //     setValue('wat_chain_id', 'A', { shouldValidate: true });
+  //   }
+  // }, [pdbIdValue, setValue]);
 
   const tabs = [
     { id: 'input', name: 'Input', icon: LogIn },
@@ -455,7 +468,7 @@ export default function PipelineForm({ onSubmit , isRunning }: PipelineFormProps
                   <CardContent>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <Label>Protein Force Field *</Label>
+                        <Label>Protein Force Field</Label>
                         <Select
                           value={watch('prot_force_field')}
                           onValueChange={(val) => setValue('prot_force_field', val, { shouldValidate: true })}
@@ -476,7 +489,7 @@ export default function PipelineForm({ onSubmit , isRunning }: PipelineFormProps
                         )}
                       </div>
                       <div>
-                        <Label>Ligand Force Field *</Label>
+                        <Label>Ligand Force Field</Label>
                         <Select
                           value={watch('lig_force_field')}
                           onValueChange={(val) => setValue('lig_force_field', val, { shouldValidate: true })}
@@ -497,7 +510,7 @@ export default function PipelineForm({ onSubmit , isRunning }: PipelineFormProps
                         )}
                       </div>
                       <div>
-                        <Label>Ligand Partial Charges *</Label>
+                        <Label>Ligand Partial Charges</Label>
                         <Select
                           value={watch('lig_partial_charges')}
                           onValueChange={(val) => setValue('lig_partial_charges', val, { shouldValidate: true })}
@@ -518,7 +531,7 @@ export default function PipelineForm({ onSubmit , isRunning }: PipelineFormProps
                         )}
                       </div>
                       <div>
-                        <Label>Water Model *</Label>
+                        <Label>Water Model</Label>
                         <Select
                           value={watch('wat_model')}
                           onValueChange={(val) => setValue('wat_model', val, { shouldValidate: true })}
@@ -548,14 +561,14 @@ export default function PipelineForm({ onSubmit , isRunning }: PipelineFormProps
                   <CardHeader>
                     <CardTitle className="text-lg">Solvation Parameters</CardTitle>
                     <CardDescription>
-                      Configure the solvation and ion parameters for your system
+                      {/* Configure the solvation and ion parameters for your system */}
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="flex items-center space-x-2">
-                        <Switch id="solvate" {...register('solvate')} defaultChecked />
-                        <Label htmlFor="solvate">Solvate System</Label>
+                        {/* <Switch id="solvate" {...register('solvate')} defaultChecked disabled/> */}
+                        {/* <Label htmlFor="solvate">Solvate System</Label> */}
                         {errors.solvate && (
                           <p className="text-red-600 text-sm mt-1">{errors.solvate.message}</p>
                         )}
@@ -568,11 +581,13 @@ export default function PipelineForm({ onSubmit , isRunning }: PipelineFormProps
                         )}
                       </div>
                       <div>
-                        <Label>PBC Box Padding (nm) *</Label>
+                        <Label>PBC Box Padding (nm)</Label>
                         <Input
                           type="number"
                           step="0.1"
                           {...register('PBC_box_padding', { valueAsNumber: true })}
+                            value={watch('PBC_box_padding') !== undefined ? Number(watch('PBC_box_padding')).toFixed(1.0) : ''} // force 1.0
+                            onChange={e => setValue('PBC_box_padding', parseFloat(e.target.value), { shouldValidate: true })}
                           className="mt-1"
                         />
                         {errors.PBC_box_padding && (
@@ -580,7 +595,7 @@ export default function PipelineForm({ onSubmit , isRunning }: PipelineFormProps
                         )}
                       </div>
                       <div>
-                        <Label>Salt Concentration (M) *</Label>
+                        <Label>Salt Concentration (M)</Label>
                         <Input
                           type="number"
                           step="0.01"
@@ -621,11 +636,13 @@ export default function PipelineForm({ onSubmit , isRunning }: PipelineFormProps
                   <CardContent>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <Label>Friction Coefficient (ps⁻¹) *</Label>
+                        <Label>Friction Coefficient (ps⁻¹) </Label>
                         <Input
                           type="number"
                           step="0.1"
                           {...register('friction_coeff', { valueAsNumber: true })}
+                          value={watch('friction_coeff') !== undefined ? Number(watch('friction_coeff')).toFixed(1.0) : ''}
+                          onChange={e => setValue('friction_coeff', parseFloat(e.target.value), { shouldValidate: true })}
                           className="mt-1"
                         />
                         {errors.friction_coeff && (
@@ -633,7 +650,7 @@ export default function PipelineForm({ onSubmit , isRunning }: PipelineFormProps
                         )}
                       </div>
                       <div>
-                        <Label>MD Time Step (ps) *</Label>
+                        <Label>MD Time Step (ps)</Label>
                         <Input
                           type="number"
                           step="0.001"
@@ -645,7 +662,7 @@ export default function PipelineForm({ onSubmit , isRunning }: PipelineFormProps
                         )}
                       </div>
                       <div>
-                        <Label>Harmonic Restraint K (kJ/(mol·nm²)) *</Label>
+                        <Label>Harmonic Restraint K (kJ/(mol·nm²)) </Label>
                         <Input
                           type="number"
                           {...register('harmonic_restr_k', { valueAsNumber: true })}
@@ -656,19 +673,21 @@ export default function PipelineForm({ onSubmit , isRunning }: PipelineFormProps
                         )}
                       </div>
                       <div>
-                        <Label>Pressure (bar) *</Label>
+                        <Label>Pressure (bar) </Label>
                         <Input
                           type="number"
                           step="0.1"
                           {...register('pressure', { valueAsNumber: true })}
+                           value={watch('pressure') !== undefined ? Number(watch('pressure')).toFixed(1.0) : ''}
+                          onChange={e => setValue('pressure', parseFloat(e.target.value), { shouldValidate: true })}
                           className="mt-1"
                         />
                         {errors.pressure && (
-                          <p className="text-red-600 text-sm mt-1">{errors.pressure.message}</p>
+                          <p className="text-red-600 text-sm mt-2">{errors.pressure.message}</p>
                         )}
                       </div>
                       <div>
-                        <Label>Temperature (K) *</Label>
+                        <Label>Temperature (K) </Label>
                         <Input
                           type="number"
                           {...register('temperature', { valueAsNumber: true })}
@@ -679,7 +698,7 @@ export default function PipelineForm({ onSubmit , isRunning }: PipelineFormProps
                         )}
                       </div>
                       <div>
-                        <Label>Dump Interval (steps) *</Label>
+                        <Label>Dump Interval (steps)</Label>
                         <Input
                           type="number"
                           {...register('dump_interval', { valueAsNumber: true })}
@@ -690,7 +709,20 @@ export default function PipelineForm({ onSubmit , isRunning }: PipelineFormProps
                         )}
                       </div>
                       <div>
-                        <Label>Equilibration Steps *</Label>
+                        <Label>Equilibration Steps 
+
+                            <TooltipProvider>
+                            <Tooltip>
+                            <TooltipTrigger asChild>
+                            <Info className="inline h-4 w-4 ml-1 text-muted-foreground cursor-help" />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                            Run for at least 1 ns (500000) for reliable results
+                            </TooltipContent>
+                            </Tooltip>
+                            </TooltipProvider>
+
+                        </Label>
                         <Input
                           type="number"
                           {...register('equil_steps', { valueAsNumber: true })}
@@ -701,7 +733,18 @@ export default function PipelineForm({ onSubmit , isRunning }: PipelineFormProps
                         )}
                       </div>
                       <div>
-                        <Label>Production Steps *</Label>
+                        <Label>Production Steps 
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Info className="inline h-4 w-4 ml-1 text-muted-foreground cursor-help" />
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  Run for at least 5 ns (2000000) for reliable results
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                        </Label>
                         <Input
                           type="number"
                           {...register('prod_steps', { valueAsNumber: true })}
@@ -727,7 +770,7 @@ export default function PipelineForm({ onSubmit , isRunning }: PipelineFormProps
                   <CardContent>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <Label>Grid Box Padding (Å) *</Label>
+                        <Label>Grid Box Padding (nm) </Label>
                         <Input
                           type="number"
                           step="0.1"
@@ -739,7 +782,7 @@ export default function PipelineForm({ onSubmit , isRunning }: PipelineFormProps
                         )}
                       </div>
                       <div>
-                        <Label>Water Number Density (mol/Å³) *</Label>
+                        <Label>Water Number Density (mol/Å³) </Label>
                         <div className="relative">
                           <Input
                             type="number"
@@ -772,7 +815,7 @@ export default function PipelineForm({ onSubmit , isRunning }: PipelineFormProps
                         )}
                       </div>
                       <div className="md:col-span-2">
-                        <Label>Water Selection Method *</Label>
+                        <Label>Water Selection Method </Label>
                         <div className="flex space-x-4 mt-1">
                           <div className="flex items-center space-x-2">
                             <input
@@ -782,11 +825,11 @@ export default function PipelineForm({ onSubmit , isRunning }: PipelineFormProps
                               onChange={() => {
                                 setWaterSelection('wat_sites');
                                 setValue('wat_sel_dist', undefined, { shouldValidate: true });
-                                setValue('wat_sites', 'B473', { shouldValidate: true });
+                                setValue('wat_sites', '', { shouldValidate: true });
                               }}
                               className="h-4 w-4 text-primary"
                             />
-                            <Label htmlFor="wat_sites">Water Sites</Label>
+                            <Label htmlFor="wat_sites">Water Sites *</Label>
                           </div>
                           <div className="flex items-center space-x-2">
                             <input
@@ -812,17 +855,18 @@ export default function PipelineForm({ onSubmit , isRunning }: PipelineFormProps
                       </div>
                       {waterSelection === 'wat_sites' && (
                         <div className="md:col-span-2">
-                          <Label>Water Sites (comma-separated, e.g., A1326,A1327) *</Label>
+                          <Label>Water Sites (comma-separated) *</Label>
                           <Input
                             type="text"
                             {...register('wat_sites')}
                             className="mt-1"
+                            placeholder='B473'
                           />
                         </div>
                       )}
                       {waterSelection === 'wat_sel_dist' && (
                         <div>
-                          <Label>Water Selection Distance (Å) *</Label>
+                          <Label>Water Selection Distance (Å) </Label>
                           <Input
                             type="number"
                             step="0.1"
@@ -858,7 +902,7 @@ export default function PipelineForm({ onSubmit , isRunning }: PipelineFormProps
                         )}
                       </div>
                       <div>
-                        <Label>Output Prefix *</Label>
+                        <Label>Prefix for MD output</Label>
                         <Input
                           type="text"
                           {...register('output_prefix')}

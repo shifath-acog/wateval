@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import PipelineForm from '../components/PipelineForm';
 import MoleculeViewer from '../components/MoleculeViewer';
 import SummaryTable from '../components/SummaryTable';
+import MolecularDynamicsLoader from '../components/MolecularDynamicsLoader'; // Add this import
 
 export default function Home() {
   const [error, setError] = useState<string | null>(null);
@@ -101,20 +102,23 @@ export default function Home() {
 
   return (
     <div className="p-6 mt-22">
-      {/* Change is here: Pass isRunning to PipelineForm and always render it */}
+      {/* Pass isRunning to PipelineForm and always render it */}
       <PipelineForm onSubmit={handleSubmit} isRunning={isRunning} />
 
       {error && <p className="text-red-600 mt-4">{error}</p>}
-      {isRunning && <p className="mt-4 text-blue-600">🔄 Simulation running... You can safely close this page and return later.</p>}
+      
+      
+      {isRunning && <MolecularDynamicsLoader />}
 
       {/* Show results once they are available */}
       {!isRunning && pdbUrl && (
         <>
           <h2 className="text-xl font-semibold mt-6">✅ Results</h2>
           {/* <h1> PDB Visualization </h1> */}
-          <MoleculeViewer files={[pdbUrl]} height="500px" width="800px" />
+        
           {/* <h1> Summary Table </h1> */}
           <SummaryTable summaryUrl={summaryUrl} />
+         
         </>
       )}
     </div>
