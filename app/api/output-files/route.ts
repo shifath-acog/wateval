@@ -16,8 +16,7 @@ export async function GET(req: Request) {
   // If 'file' query parameter is present, serve the file
   if (file) {
     try {
-      // *** CHANGE THIS LINE ***
-      const dataDir = '/app/results'; // Changed from '/app/data' to '/app/results'
+      const dataDir = '/app/results'; // Matches FastAPI results directory
       const filePath = path.join(dataDir, decodeURIComponent(file));
 
       const stat = await fs.stat(filePath);
@@ -43,8 +42,7 @@ export async function GET(req: Request) {
 
   // Otherwise, list available files for the task
   try {
-    // *** CHANGE THIS LINE ***
-    const dataDir = '/app/results'; 
+    const dataDir = '/app/results';
     const pdbFile = `${taskId}_md_energy_min.pdb`;
     const summaryFile = `${taskId}_wat_FE_summary.dat`;
     const pdbPath = path.join(dataDir, pdbFile);

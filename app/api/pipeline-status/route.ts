@@ -1,3 +1,4 @@
+//pipeline-status/route.ts
 import { NextResponse } from 'next/server';
 
 export async function GET(req: Request) {
@@ -10,16 +11,22 @@ export async function GET(req: Request) {
     }
 
     const statusUrl = `http://host.docker.internal:5001/run-pipeline-status/${taskId}`;
-    const response = await fetch(statusUrl);
+    const response = await fetch(statusUrl, { cache: 'no-store' }); // Prevent caching
     const statusData = await response.json();
 
     if (!response.ok) {
       return NextResponse.json({ error: statusData.detail || 'Failed to get status' }, { status: response.status });
     }
 
-    return NextResponse.json(statusData);
+    // Ensure status is always present, default to 'unknown' if missing
+    const normalizedData = {
+      ...statusData,
+      status: statusData.status || 'unknown',
+    };
+
+    return NextResponse.json(normalizedData);
   } catch (error) {
     console.error('Error in pipeline-status route:', error);
-    return NextResponse.json({ error: 'Internal server error checking status' }, { status: 500 });
+    return NextResponse.json({ error: 'Internal server error checking status', status: 'unknown' }, { status: 500 });
   }
 }
