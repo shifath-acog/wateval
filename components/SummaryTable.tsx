@@ -87,9 +87,9 @@ export default function SummaryTable({ summaryUrl }: SummaryTableProps) {
   };
 
   const getEnergyColor = (value: number) => {
-    if (value < -5) return 'text-green-700 bg-green-50';
+    if (value < -6) return 'text-green-700 bg-green-50';
     if (value < 0) return 'text-blue-700 bg-blue-50';
-    if (value < 5) return 'text-orange-700 bg-orange-50';
+    if (value < 3) return 'text-orange-700 bg-orange-50';
     return 'text-red-700 bg-red-50';
   };
 
@@ -126,7 +126,7 @@ export default function SummaryTable({ summaryUrl }: SummaryTableProps) {
   }
 
   return (
-    <div className="mt-6 space-y-6 p-6 mr-6 ml-6 bg-gray-50 rounded-xl shadow-md">
+    <div className="mt-6 space-y-6">
       {/* Header Section */}
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-black">Binding Free Energies of Water Sites</h1>
@@ -138,11 +138,11 @@ export default function SummaryTable({ summaryUrl }: SummaryTableProps) {
           <table className="w-full">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200">
-                <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">
+                <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm  tracking-wider">
                   Water Site
                 </th>
                 <th 
-                  className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors duration-200 select-none"
+                  className="text-left py-4 px-6 font-semibold text-gray-700 text-sm  tracking-wider cursor-pointer hover:bg-gray-100 transition-colors duration-200 select-none"
                   onClick={handleSort}
                 >
                   <div className="flex items-center space-x-2">
@@ -154,13 +154,13 @@ export default function SummaryTable({ summaryUrl }: SummaryTableProps) {
                     </div>
                   </div>
                 </th>
-                <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">
+                <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm  tracking-wider">
                   <div>
                     <span>T×Entropy</span>
                     <span className="text-xs text-gray-500 block">(kcal/mol)</span>
                   </div>
                 </th>
-                <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">
+                <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm  tracking-wider">
                   <div>
                     <span>Energy/Enthalpy</span>
                     <span className="text-xs text-gray-500 block">(kcal/mol)</span>

@@ -93,7 +93,7 @@ export default function PipelineForm({ onSubmit , isRunning }: PipelineFormProps
   const methods = useForm({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      pdb_id: '1LPG',
+      // pdb_id: '1LPG',
       // prot_chain_id: 'A',
       // lig_chain_id: 'A',
       // lig_resid: 301,
@@ -116,11 +116,12 @@ export default function PipelineForm({ onSubmit , isRunning }: PipelineFormProps
       pressure: 1.0,
       temperature: 300,
       dump_interval: 1000,
-      equil_steps: 500000,
-      prod_steps: 2000000,
+      equil_steps: 50000,
+      prod_steps: 250000,
       grid_box_padding: 1.0,
       wat_num_dens: 0.0329,
       // wat_sites: 'B473',
+      wat_sel_dist: 5.0,
       // output_folder: '1mwe_wat_thermo',
       output_prefix: 'md',
     },
@@ -141,7 +142,7 @@ export default function PipelineForm({ onSubmit , isRunning }: PipelineFormProps
   const [pdbFile, setPdbFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pdbId, setPdbId] = useState(methods.getValues('pdb_id') || '');
-  const [waterSelection, setWaterSelection] = useState<'wat_sites' | 'wat_sel_dist'>('wat_sites');
+  const [waterSelection, setWaterSelection] = useState<'wat_sel_dist' | 'wat_sites'>('wat_sel_dist');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const pdbIdValue = watch('pdb_id');
 
@@ -253,9 +254,9 @@ export default function PipelineForm({ onSubmit , isRunning }: PipelineFormProps
     <FormProvider {...methods}>
       <Card className="w-full max-w-6xl mx-auto shadow-lg">
         <CardHeader>
-          <CardTitle className="text-2xl font-bold text-primary">Molecular Dynamics Simulation Setup</CardTitle>
+          <CardTitle className="text-2xl font-bold text-primary">Setup for Molecular Dynamics simulation followed by GIST calculation</CardTitle>
           <CardDescription className="text-muted-foreground">
-            Configure your simulation parameters step by step
+            Configure your pipeline parameters step by step
           </CardDescription>
           <Progress value={progress} className="h-2 mt-4" />
         </CardHeader>
@@ -373,9 +374,16 @@ export default function PipelineForm({ onSubmit , isRunning }: PipelineFormProps
                               </TooltipProvider>
                             </div>
                             <Input
-                              {...register('pdb_id')}
+                              {...register('pdb_id',
+                                {required: 'PDB ID is required',
+                                pattern: 
+                                  {value: /^[0-9][A-Za-z0-9]{3,4}$/, 
+                                   message: 'Invalid PDB ID format (e.g., 1MWE or 1LPG)'} })}
                               value={pdbId}
-                              onChange={(e) => setPdbId(e.target.value)}
+                               onChange={(e) => {
+                                setPdbId(e.target.value);
+                                setValue('pdb_id', e.target.value, { shouldValidate: true });
+                              }}
                               placeholder="Enter PDB ID (e.g., 1MWE or 1LPG)"
                               className="mt-1"
                             />
@@ -740,7 +748,7 @@ export default function PipelineForm({ onSubmit , isRunning }: PipelineFormProps
                                   <Info className="inline h-4 w-4 ml-1 text-muted-foreground cursor-help" />
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                  Run for at least 5 ns (2000000) for reliable results
+                                  Run for at least 5 ns (2500000) for reliable results
                                 </TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
@@ -815,66 +823,75 @@ export default function PipelineForm({ onSubmit , isRunning }: PipelineFormProps
                         )}
                       </div>
                       <div className="md:col-span-2">
-                        <Label>Water Selection Method </Label>
+                        <Label className="mb-2 block">Water Selection Method</Label>
                         <div className="flex space-x-4 mt-1">
-                          <div className="flex items-center space-x-2">
-                            <input
-                              type="radio"
-                              id="wat_sites"
-                              checked={waterSelection === 'wat_sites'}
-                              onChange={() => {
-                                setWaterSelection('wat_sites');
-                                setValue('wat_sel_dist', undefined, { shouldValidate: true });
-                                setValue('wat_sites', '', { shouldValidate: true });
-                              }}
-                              className="h-4 w-4 text-primary"
-                            />
-                            <Label htmlFor="wat_sites">Water Sites *</Label>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <input
-                              type="radio"
-                              id="wat_sel_dist"
-                              checked={waterSelection === 'wat_sel_dist'}
-                              onChange={() => {
-                                setWaterSelection('wat_sel_dist');
-                                setValue('wat_sel_dist', 5.0, { shouldValidate: true });
-                                setValue('wat_sites', undefined, { shouldValidate: true });
-                              }}
-                              className="h-4 w-4 text-primary"
-                            />
-                            <Label htmlFor="wat_sel_dist">Water Selection Distance</Label>
-                          </div>
+                          <button
+                            type="button"
+                            className={`flex items-center px-4 py-2 rounded-lg border transition-colors ${
+                              waterSelection === 'wat_sites'
+                                ? 'bg-primary text-white border-primary'
+                                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                            }`}
+                            onClick={() => {
+                              setWaterSelection('wat_sites');
+                              setValue('wat_sel_dist', undefined, { shouldValidate: true });
+                              setValue('wat_sites', '', { shouldValidate: true });
+                            }}
+                          >
+                            <span role="img" aria-label="Sites" className="mr-2"></span>
+                            Water Sites
+                          </button>
+                          <button
+                            type="button"
+                            className={`flex items-center px-4 py-2 rounded-lg border transition-colors ${
+                              waterSelection === 'wat_sel_dist'
+                                ? 'bg-primary text-white border-primary'
+                                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                            }`}
+                            onClick={() => {
+                              setWaterSelection('wat_sel_dist');
+                              setValue('wat_sel_dist', 5.0, { shouldValidate: true });
+                              setValue('wat_sites', undefined, { shouldValidate: true });
+                            }}
+                          >
+                            <span role="img" aria-label="Distance" className="mr-2"></span>
+                            Water Selection Distance
+                          </button>
                         </div>
-                        {errors.wat_sites && (
-                          <p className="text-red-600 text-sm mt-1">{errors.wat_sites.message}</p>
-                        )}
-                        {errors.wat_sel_dist && (
-                          <p className="text-red-600 text-sm mt-1">{errors.wat_sel_dist.message}</p>
-                        )}
+                        <div className="mt-4">
+                          {waterSelection === 'wat_sites' && (
+                            <div>
+                              <Label>Water Sites (comma-separated) *</Label>
+                              <Input
+                                type="text"
+                                {...register('wat_sites')}
+                                className="mt-1"
+                                placeholder="E.g., B473 or A1326,A1327"
+                                autoFocus
+                              />
+                              {errors.wat_sites && (
+                                <p className="text-red-600 text-sm mt-1">{errors.wat_sites.message}</p>
+                              )}
+                            </div>
+                          )}
+                          {waterSelection === 'wat_sel_dist' && (
+                            <div>
+                              <Label>Water Selection Distance (Å)</Label>
+                              <Input
+                                type="number"
+                                step="0.1"
+                                {...register('wat_sel_dist', { valueAsNumber: true })}
+                                className="mt-1"
+                                autoFocus
+                              />
+                              {errors.wat_sel_dist && (
+                                <p className="text-red-600 text-sm mt-1">{errors.wat_sel_dist.message}</p>
+                              )}
+                            </div>
+                          )}
+                        </div>
                       </div>
-                      {waterSelection === 'wat_sites' && (
-                        <div className="md:col-span-2">
-                          <Label>Water Sites (comma-separated) *</Label>
-                          <Input
-                            type="text"
-                            {...register('wat_sites')}
-                            className="mt-1"
-                            placeholder='B473'
-                          />
-                        </div>
-                      )}
-                      {waterSelection === 'wat_sel_dist' && (
-                        <div>
-                          <Label>Water Selection Distance (Å) </Label>
-                          <Input
-                            type="number"
-                            step="0.1"
-                            {...register('wat_sel_dist', { valueAsNumber: true })}
-                            className="mt-1"
-                          />
-                        </div>
-                      )}
+
                     </div>
                   </CardContent>
                 </Card>
