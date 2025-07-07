@@ -13,21 +13,21 @@ export default function PipelineInputs({ taskId }: PipelineInputsProps) {
 
   const inputs = JSON.parse(storedInputs);
 
-  return (
-    <Card className="max-w-2xl mx-auto">
-      <CardHeader>
-        <CardTitle className="text-base">Submitted Pipeline Parameters</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
-          {Object.entries(inputs).map(([key, value]) => (
-            <div key={key}>
-              <p className="text-sm font-medium capitalize">{key.replace(/_/g, ' ')}</p>
-              <p className="text-sm text-gray-600">{value !== null && value !== undefined ? value.toString() : 'N/A'}</p>
-            </div>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
-  );
+return (
+  <Card className="w-full max-w-6xl mx-auto shadow-xl my-16">
+    <CardHeader>
+      <CardTitle className="text-2xl font-bold">Submitted Pipeline Parameters</CardTitle>
+    </CardHeader>
+    <CardContent className="space-y-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+        {Object.entries(inputs).map(([key, value]) => (
+          <div key={key}>
+            <p className="text-sm font-medium capitalize">{key.replace(/_/g, ' ')}</p>
+            <p className="text-sm text-gray-600">{value !== null && value !== undefined ? value.toString() : 'N/A'}</p>
+          </div>
+        ))}
+      </div>
+    </CardContent>
+  </Card>
+);
 }
