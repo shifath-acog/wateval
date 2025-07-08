@@ -20,24 +20,33 @@ export default function Home() {
   const [isDownloading, setIsDownloading] = useState(false);
   const [selectedOption, setSelectedOption] = useState<string>('medium');
 
-  // Effect to load taskId and results from localStorage on initial render
+  // --- 1. Initial Load Effect ---
+  // On component mount, this tries to load an existing job from localStorage.
   useEffect(() => {
     const storedTaskId = localStorage.getItem('pipelineTaskId');
     if (storedTaskId) {
       setTaskId(storedTaskId);
       const storedPdbUrl = localStorage.getItem('pipelinePdbUrl');
       const storedSummaryUrl = localStorage.getItem('pipelineSummaryUrl');
+      // If results are also stored, display them immediately.
       if (storedPdbUrl && storedSummaryUrl) {
         setPdbUrl(storedPdbUrl);
         setSummaryUrl(storedSummaryUrl);
         setIsRunning(false);
+      } else {
+        // If only a taskId exists, we assume the job is still running.
+        setIsRunning(true);
       }
     }
   }, []);
 
-  // Effect for polling the pipeline status
+  // --- 2. Polling Effect ---
+  // This effect runs whenever there is a taskId but no results (pdbUrl).
   useEffect(() => {
-    if (!taskId || pdbUrl || !isRunning) return;
+    // We only poll if there's a task ID and we are in a "running" state.
+    if (!taskId || !isRunning) {
+        return;
+    }
 
     let isMounted = true;
     const checkStatus = async () => {
@@ -48,59 +57,67 @@ export default function Home() {
         if (!response.ok) {
           console.error('Status check failed:', response.statusText);
           if (response.status === 404) {
-            setError('Task not found. Clearing job data.');
-            handleClear();
+            setError('Task not found on the server. Clearing job.');
+            handleClear(); // Task is invalid, so clear it.
           }
           return;
         }
 
         const data = await response.json();
         if (data.status === 'completed') {
+          // On completion, set results, stop running, and save results to localStorage.
           setPdbUrl(data.pdb_url);
           setSummaryUrl(data.summary_url);
           setIsRunning(false);
           localStorage.setItem('pipelinePdbUrl', data.pdb_url);
           localStorage.setItem('pipelineSummaryUrl', data.summary_url);
         } else if (data.status === 'failed') {
+          // On failure, set error, stop running, and clear everything.
           setError(data.error || 'The pipeline process failed.');
           setIsRunning(false);
           handleClear();
-        } else if (data.status === 'unknown') {
-          console.warn('Task status is unknown, will retry.');
-          // Allow retry but avoid infinite loop by checking mount state
         }
+        // If status is 'running' or 'pending', the effect does nothing and waits for the next interval.
       } catch (err) {
         console.error('Error during polling:', err);
         if (isMounted) {
           setError('Failed to get pipeline status.');
           setIsRunning(false);
-          handleClear();
         }
       }
     };
 
-    checkStatus();
+    checkStatus(); // Check immediately on start.
     const intervalId = setInterval(checkStatus, 10000);
 
+    // Cleanup function to stop polling when the component unmounts or dependencies change.
     return () => {
       isMounted = false;
       clearInterval(intervalId);
     };
-  }, [taskId, pdbUrl, isRunning]);
+  }, [taskId, isRunning]); // Dependencies that trigger the polling logic.
 
-  // Centralized function to clear all job data
+  // --- 3. Centralized Cleanup Function ---
+  // A single, reliable function to clear all state and localStorage data.
   const handleClear = useCallback(() => {
     localStorage.removeItem('pipelineTaskId');
     localStorage.removeItem('pipelinePdbUrl');
     localStorage.removeItem('pipelineSummaryUrl');
+    // Also clear any saved inputs
+    if (taskId) {
+        localStorage.removeItem(`pipelineInputs_${taskId}`);
+    }
     setTaskId(null);
     setPdbUrl(null);
     setSummaryUrl(null);
     setError(null);
     setIsRunning(false);
-  }, []);
+  }, [taskId]); // Depend on taskId to clear the correct input storage.
 
+  // --- 4. New Job Submission ---
+  // Handles the submission of a new pipeline.
   const handleSubmit = async (formData: FormData) => {
+    // CRITICAL: Clear any previous job data first.
     handleClear();
     setIsRunning(true);
 
@@ -115,8 +132,11 @@ export default function Home() {
         throw new Error(data.error || 'Failed to start pipeline');
       }
 
+      // Save the inputs used for this specific job.
       const formEntries = Object.fromEntries(formData.entries());
       localStorage.setItem(`pipelineInputs_${data.taskId}`, JSON.stringify(formEntries));
+      
+      // Save the new task ID to start the polling process.
       localStorage.setItem('pipelineTaskId', data.taskId);
       setTaskId(data.taskId);
     } catch (err) {
@@ -131,9 +151,7 @@ export default function Home() {
     setIsDownloading(true);
     fetch(`/api/download-custom-results/${taskId}?option=${option}`, { method: 'GET' })
       .then(response => {
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         return response.blob();
       })
       .then(blob => {
@@ -155,7 +173,9 @@ export default function Home() {
       });
   };
 
-  if (pdbUrl && !isRunning) {
+  // --- 5. Conditional Rendering ---
+  // If results are available (pdbUrl is set), show the results view.
+  if (pdbUrl) {
     return (
       <div className="min-h-screen bg-gray-50/50 p-6 mt-22">
         <div className="max-w-6xl mx-auto space-y-6">
@@ -168,16 +188,15 @@ export default function Home() {
             </CardHeader>
             <CardContent className="space-y-6">
               {/* Download Card */}
-              <div>
-                <Card className="max-w-4xl mx-auto shadow-xl">
+              <Card className="max-w-4xl mx-auto shadow-sm">
                   <CardHeader>
-                    <CardTitle className="text-2xl font-semibold">Download Results</CardTitle>
+                    <CardTitle className="text-xl font-semibold">Download Results</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <Label htmlFor="download-option" className="text-sm font-medium mb-2 block">
                       Package Size
                     </Label>
-                    <div className="flex flex-row items-end gap-2">
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-2">
                       <div className="flex-1">
                         <Select
                           disabled={isDownloading}
@@ -200,29 +219,18 @@ export default function Home() {
                         disabled={isDownloading}
                       >
                         {isDownloading ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Preparing...
-                          </>
+                          <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Preparing...</>
                         ) : (
-                          <>
-                            <Download className="mr-2 h-4 w-4" />
-                            Download
-                          </>
+                          <><Download className="mr-2 h-4 w-4" />Download</>
                         )}
                       </Button>
                     </div>
                   </CardContent>
                 </Card>
-              </div>
               {/* PipelineInputs */}
-              <div>
-                <PipelineInputs taskId={taskId} />
-              </div>
+              <PipelineInputs taskId={taskId} />
               {/* Summary Table */}
-              <div>
-                <SummaryTable summaryUrl={summaryUrl} />
-              </div>
+              <SummaryTable summaryUrl={summaryUrl} />
             </CardContent>
           </Card>
         </div>
@@ -230,11 +238,12 @@ export default function Home() {
     );
   }
 
+  // Otherwise, show the main form or the loader.
   return (
     <div className="min-h-screen bg-gray-50/50 p-6 mt-22">
       <div className="max-w mx-auto space-y-6">
         <PipelineForm onSubmit={handleSubmit} isRunning={isRunning} />
-        {error && <p className="text-red-600 mt-4">{error}</p>}
+        {error && <p className="text-red-600 mt-4 text-center">{error}</p>}
         {isRunning && <MolecularDynamicsLoader />}
       </div>
     </div>
